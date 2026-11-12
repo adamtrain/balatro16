@@ -33,6 +33,8 @@ local CFG = {
     -- Real Steam integration only in instance 1 (and not at all if set to 0).
     steam = os.getenv("BALATRO_MULTI_STEAM") ~= "0",
     label = os.getenv("BALATRO_MULTI_LABEL") ~= "0",
+    -- "decks": every instance plays the same seed, each on a different deck.
+    mode = (os.getenv("BALATRO_MULTI_MODE") or ""):lower(),
     keys = {
         zoom = "f1",  -- zoom into the instance under the mouse / back out to the grid
         prev = "f2",  -- zoom to the previous instance
@@ -102,6 +104,8 @@ local V = {
     hover = 1,        -- instance the real mouse was last over
     zoom = 0,         -- zoomed instance, 0 = grid
     solo = 0,         -- the only instance receiving input, 0 = all of them
+    seed_base = 0,    -- decks mode: number all shared seeds derive from, chosen by the hub
+    seed_n = 0,       -- decks mode: which shared seed the current run uses
 }
 
 local real = {
@@ -385,6 +389,14 @@ local function handle(line)
         A.keyup(f[2], f[3])
     elseif t == "t" then
         A.text(from_hex(f[2] or ""))
+    elseif t == "b" then
+        V.seed_base = tonumber(f[2]) or 0
+    elseif t == "n" then
+        local n = tonumber(f[2]) or 0
+        if n > V.seed_n then
+            V.seed_n = n
+            V.seed_changed_at = love.timer.getTime()
+        end
     elseif t == "s" then
         V.solo = tonumber(f[2]) or 0
     elseif t == "z" then
@@ -417,6 +429,8 @@ local function net_poll()
                 -- Bring a newly connected instance up to date.
                 conn_send(c, ("z %d"):format(V.zoom))
                 conn_send(c, ("s %d"):format(V.solo))
+                conn_send(c, ("b %d"):format(V.seed_base))
+                conn_send(c, ("n %d"):format(V.seed_n))
                 conn_send(c, ("m %d %.5f %.5f"):format(V.hover, V.x, V.y))
             end
         end
@@ -566,9 +580,76 @@ end)
 -- Different seed per instance: the game derives a new run's seed from the
 -- cursor position, which is identical everywhere, so salt it per instance.
 ---------------------------------------------------------------------------
+-- Decks mode: instance n plays deck n.
+local DECKS = {
+    "b_red", "b_blue", "b_yellow", "b_green", "b_black", "b_magic", "b_nebula", "b_ghost",
+    "b_abandoned", "b_checkered", "b_zodiac", "b_painted", "b_anaglyph", "b_plasma", "b_erratic",
+    "b_challenge",
+}
+local decks_mode = CFG.mode == "decks"
+if is_hub then V.seed_base = os.time() % 1000000000 end
+
+local function forced_deck()
+    return decks_mode and G and G.P_CENTERS and G.P_CENTERS[DECKS[ID]] or nil
+end
+
+-- The nth shared seed, identical in every instance.
+local function shared_seed(n)
+    local chars = "123456789ABCDEFGHIJKLMNPQRSTUVWXYZ"
+    local x = (V.seed_base * 7919 + n * 104729) % 2147483646 + 1
+    local out = {}
+    for i = 1, 8 do
+        x = (x * 48271) % 2147483647
+        local k = x % #chars + 1
+        out[i] = chars:sub(k, k)
+    end
+    return table.concat(out)
+end
+
+-- Instances reach "start a new run" a few frames apart, so new runs that begin
+-- within a few seconds of each other count as the same run and share a seed.
+-- A run started in solo mode reuses the current seed, which puts a desynced
+-- instance back on the same run as the others.
+local function next_shared_seed()
+    local now = love.timer.getTime()
+    local fresh = now - (V.seed_changed_at or -math.huge) > 3
+    if V.seed_n == 0 or (V.solo == 0 and fresh) then
+        V.seed_n = V.seed_n + 1
+        V.seed_changed_at = now
+        emit(("n %d"):format(V.seed_n))
+    end
+    return shared_seed(V.seed_n)
+end
+
+-- Make a new run use this instance's deck, whatever deck is picked in the menu.
+-- Continued runs and challenges keep their own deck.
+local function wrap_decks()
+    if not decks_mode then return end
+    local class = rawget(_G, "Game")
+    if type(class) ~= "table" or type(class.start_run) ~= "function" then return end
+    local orig = class.start_run
+    class.start_run = function(self, args, ...)
+        local lookup = rawget(_G, "get_deck_from_name")
+        local deck = not (args and (args.savetext or args.challenge)) and forced_deck()
+        if deck and type(lookup) == "function" then
+            get_deck_from_name = function()
+                get_deck_from_name = lookup
+                return deck
+            end
+        end
+        local ok, err = pcall(orig, self, args, ...)
+        if type(lookup) == "function" then get_deck_from_name = lookup end
+        if not ok then error(err, 0) end
+    end
+end
+
 local function wrap_seed()
     local orig = rawget(_G, "generate_starting_seed")
     if type(orig) ~= "function" then return end
+    if decks_mode then
+        generate_starting_seed = next_shared_seed
+        return
+    end
     generate_starting_seed = function(...)
         local randomseed = math.randomseed
         local salt = ID * 1009.31 + os.time() % 100000 + (love.timer.getTime() % 1)
@@ -592,6 +673,7 @@ love.load = function(...)
     if game_load then game_load(...) end
     if not use_steam and G then G.STEAM = nil end
     wrap_seed()
+    wrap_decks()
     apply_layout()
     apply_audio()
 end
@@ -651,6 +733,8 @@ love.draw = function()
     if CFG.label or solo_here then
         label_font = label_font or love.graphics.newFont(13)
         local text = "#" .. ID
+        local deck = forced_deck()
+        if deck and deck.name then text = text .. " " .. deck.name end
         if solo_here then text = text .. "  SOLO INPUT (" .. CFG.keys.solo:upper() .. " to end)" end
         if is_hub and not server then
             text = ("%s (cannot listen on port %d: %s)"):format(text, CFG.port, tostring(net_err))

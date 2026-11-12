@@ -21,6 +21,25 @@ end
 
 G = { FPS_CAP = 500, CONTROLLER = { cursor_position = { x = 0, y = 0 } }, clicks = {}, typed = "" }
 
+-- The parts of Balatro's run start that decks mode hooks.
+Game = {}
+Game.__index = Game
+setmetatable(G, Game)
+G.P_CENTERS = {
+    b_red = { name = "Red Deck" }, b_blue = { name = "Blue Deck" },
+    b_yellow = { name = "Yellow Deck" }, b_green = { name = "Green Deck" },
+}
+function get_deck_from_name(name)
+    for _, v in pairs(G.P_CENTERS) do
+        if v.name == name then return v end
+    end
+end
+function Game:start_run(args)
+    args = args or {}
+    local back = get_deck_from_name(args.savetext and "Green Deck" or "Red Deck")
+    log("run", back.name, args.seed or generate_starting_seed())
+end
+
 function random_string(length, seed)
     if seed then math.randomseed(seed) end
     local ret = ""
@@ -113,6 +132,8 @@ if os.getenv("BM_TEST") then
             log("mouse", love.mouse.getPosition())
             log("steam", tostring(G.STEAM))
             log("seed", generate_starting_seed())
+            G:start_run({})
+            G:start_run({ savetext = true, seed = "SAVED" })
         end },
         -- Input from a different instance, then zoom into it (it is now the hovered one).
         { 3.2, function() if ID == 2 then love.mousepressed(50, 60, 2, false, 1); love.mousereleased(50, 60, 2, false, 1) end end },
@@ -131,7 +152,9 @@ if os.getenv("BM_TEST") then
         { 6.8, function() if ID == 3 then love.mousepressed(10, 10, 1, false, 1); love.mousereleased(10, 10, 1, false, 1) end end },
         { 7.0, function() if ID == 1 then love.keypressed("f4", "f4", false); love.keyreleased("f4", "f4") end end },
         { 7.3, function() if ID == 1 then love.keypressed("b", "b", false); love.keyreleased("b", "b") end end },
+        { 7.4, function() if ID == 3 then G:start_run({}) end end },
         { 7.6, function() if ID == 1 then love.keypressed("f4", "f4", false); love.keyreleased("f4", "f4") end end },
+        { 7.7, function() G:start_run({}) end },
         { 7.9, function() if ID == 1 then love.keypressed("c", "c", false); love.keyreleased("c", "c") end end },
         { 8.4, function() love.event.quit() end },
     }

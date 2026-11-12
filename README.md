@@ -51,6 +51,25 @@ Everything else you do with the mouse or keyboard, in any window, happens in
 all of them. The game's own cursor is drawn in every window so you can see
 where the pointer is in each.
 
+### Same seed, different decks
+
+Add the word `decks` to give every instance the same seed but its own deck:
+
+    launch.bat 16 decks
+
+Instance 1 plays the Red Deck, then in order: Blue, Yellow, Green, Black, Magic,
+Nebula, Ghost, Abandoned, Checkered, Zodiac, Painted, Anaglyph, Plasma, Erratic,
+and instance 16 plays the Challenge Deck. Each window shows its deck next to its
+number. With fewer than 16 instances you get the first decks in that list.
+
+- The deck is applied when a new run starts, whatever deck is selected in the
+  menu and whether or not it is unlocked. Continued runs and challenges keep
+  their own deck.
+- Every new run gets a fresh seed shared by all instances. A seed you type in
+  yourself is used as typed.
+- If you start a new run while solo input (F4) is on, that instance gets the
+  same seed the others are currently on, so it can rejoin them.
+
 ### Fixing a desync
 
 If one instance ends up on a different screen from the rest, hover it (or zoom
@@ -67,8 +86,9 @@ solo input is on, zooming to another instance moves solo input to it.
 - **Saves.** Each instance has its own save folder, `%AppData%\Balatro_multi_<n>`,
   copied from your real save the first time (without any run in progress). Your
   real save is never changed. Delete those folders to re-copy.
-- **Seeds.** New runs get a different seed in every instance. A seed you type in
-  yourself is typed into all of them, and the tutorial uses the game's fixed seed.
+- **Seeds.** New runs get a different seed in every instance, unless you use
+  `decks` mode. A seed you type in yourself is typed into all of them, and the
+  tutorial uses the game's fixed seed.
 - **Sound.** Only instance 1 is audible in the grid, and only the zoomed
   instance when zoomed.
 - **Steam.** Only instance 1 talks to Steam. If it closes straight away, start

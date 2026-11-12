@@ -1,10 +1,13 @@
 @echo off
 rem Starts N copies of Balatro that all receive the same input.
 rem
-rem   launch.bat [count] [path\to\Balatro.exe]
+rem   launch.bat [count] [decks] [path\to\Balatro.exe]
 rem
 rem count is 2, 4, 8 or 16 (default 4). If Balatro is not in the default Steam
 rem folder, pass the path to Balatro.exe or set BALATRO_EXE.
+rem
+rem Adding the word "decks" makes every instance play the same seed, each on a
+rem different deck: launch.bat 16 decks
 setlocal
 
 set "N=%~1"
@@ -18,7 +21,11 @@ echo Instance count must be 2, 4, 8 or 16.
 exit /b 1
 :count_ok
 
+set "MODE="
 set "GAME=%~2"
+if /I "%~2"=="decks" set "MODE=decks"
+if /I "%~2"=="decks" set "GAME=%~3"
+if /I "%~3"=="decks" set "MODE=decks"
 if "%GAME%"=="" set "GAME=%BALATRO_EXE%"
 if "%GAME%"=="" set "GAME=%ProgramFiles(x86)%\Steam\steamapps\common\Balatro\Balatro.exe"
 if exist "%GAME%" goto game_ok
@@ -41,6 +48,7 @@ timeout /t 2 /nobreak >nul
 
 rem Tells the mod how many instances there are.
 set "BALATRO_MULTI_N=%N%"
+set "BALATRO_MULTI_MODE=%MODE%"
 
 rem Optional settings (uncomment to change):
 rem set "BALATRO_MULTI_DISPLAY=2"   which monitor to use

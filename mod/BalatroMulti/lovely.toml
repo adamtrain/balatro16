@@ -1,0 +1,12 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+# Appends the harness to the end of the game's main.lua, after the game has
+# defined its love.* callbacks, so the harness can wrap them.
+[[patches]]
+[patches.copy]
+target = "main.lua"
+position = "append"
+sources = ["multi.lua"]

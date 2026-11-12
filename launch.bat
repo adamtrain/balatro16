@@ -58,8 +58,25 @@ set "SDL_MOUSE_FOCUS_CLICKTHROUGH=1"
 rem Every instance reads a connected controller, focused or not.
 set "SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1"
 
-for /L %%i in (1,1,%N%) do (
-    set "BALATRO_MULTI_ID=%%i"
-    start "" /D "%GAMEDIR%" "%GAME%"
-)
+rem Start the instances one at a time, waiting for each to finish loading:
+rem Lovely crashes if two copies start up at the same moment.
+set "BALATRO_MULTI_READY=%TEMP%\balatro_multi_ready"
+if not exist "%BALATRO_MULTI_READY%" mkdir "%BALATRO_MULTI_READY%"
+del /Q "%BALATRO_MULTI_READY%\*" >nul 2>&1
+
+for /L %%i in (1,1,%N%) do call :start_one %%i
 endlocal
+exit /b 0
+
+:start_one
+set "BALATRO_MULTI_ID=%1"
+echo Starting instance %1 of %N%...
+start "" /D "%GAMEDIR%" "%GAME%"
+if "%1"=="%N%" exit /b 0
+set /a TRIES=0
+:wait_ready
+if exist "%BALATRO_MULTI_READY%\%1" exit /b 0
+set /a TRIES+=1
+if %TRIES% GEQ 60 exit /b 0
+timeout /t 1 /nobreak >nul
+goto wait_ready

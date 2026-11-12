@@ -562,7 +562,23 @@ love.load = function(...)
     apply_audio()
 end
 
+-- The launcher starts instances one at a time, because Lovely crashes when two
+-- copies start up at once. Tell it when this one has finished loading.
+local ready_dir = os.getenv("BALATRO_MULTI_READY")
+local ready_at
+
+local function signal_ready()
+    if not ready_dir then return end
+    local now = love.timer.getTime()
+    ready_at = ready_at or now + 1
+    if now < ready_at then return end
+    local f = io.open(ready_dir .. "/" .. ID, "w")
+    if f then f:write("ready"); f:close() end
+    ready_dir = nil
+end
+
 love.update = function(dt)
+    signal_ready()
     net_poll()
     flush_move()
     -- Window size changes made by the harness do not raise a resize event.

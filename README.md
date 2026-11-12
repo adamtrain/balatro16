@@ -31,7 +31,9 @@ The mod does nothing when the game is started normally from Steam.
        launch.bat 16
 
 `launch.bat` first closes any copy of Balatro that is already running, including
-one you started normally from Steam. Double-clicking `launch.bat` starts 4. To stop, press Ctrl+F10 in any window.
+one you started normally from Steam. The instances start one after
+another, each waiting for the previous one to load, so 16 takes a minute or so.
+Double-clicking `launch.bat` starts 4. To stop, press Ctrl+F10 in any window.
 
 The count can be 2, 4, 8 or 16 (default 4). If Balatro is not in the default
 Steam folder, pass the path:

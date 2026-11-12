@@ -127,7 +127,13 @@ if os.getenv("BM_TEST") then
         { 5.6, function() log("state", "zoom3", love.graphics.getDimensions()) end },
         { 5.7, function() if ID == 1 then love.keypressed("f1", "f1", false) end end },
         { 6.7, function() log("state", "grid2", love.graphics.getDimensions()) end },
-        { 7.0, function() love.event.quit() end },
+        -- Solo mode: instance 3 becomes the hovered one, then only it gets input.
+        { 6.8, function() if ID == 3 then love.mousepressed(10, 10, 1, false, 1); love.mousereleased(10, 10, 1, false, 1) end end },
+        { 7.0, function() if ID == 1 then love.keypressed("f4", "f4", false); love.keyreleased("f4", "f4") end end },
+        { 7.3, function() if ID == 1 then love.keypressed("b", "b", false); love.keyreleased("b", "b") end end },
+        { 7.6, function() if ID == 1 then love.keypressed("f4", "f4", false); love.keyreleased("f4", "f4") end end },
+        { 7.9, function() if ID == 1 then love.keypressed("c", "c", false); love.keyreleased("c", "c") end end },
+        { 8.4, function() love.event.quit() end },
     }
 end
 

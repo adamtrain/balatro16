@@ -37,6 +37,7 @@ local CFG = {
         zoom = "f1",  -- zoom into the instance under the mouse / back out to the grid
         prev = "f2",  -- zoom to the previous instance
         next = "f3",  -- zoom to the next instance
+        solo = "f4",  -- send input to one instance only (to fix a desync) / back to all
         quit = "f10", -- with Ctrl held: quit every instance
     },
 }
@@ -100,6 +101,7 @@ local V = {
     keys = {},        -- virtual keys held
     hover = 1,        -- instance the real mouse was last over
     zoom = 0,         -- zoomed instance, 0 = grid
+    solo = 0,         -- the only instance receiving input, 0 = all of them
 }
 
 local real = {
@@ -314,34 +316,50 @@ local function inject(name, ...)
 end
 
 local A = {}
+-- In solo mode only the chosen instance acts on input. The others still let
+-- go of anything they were holding when solo mode began.
+local function accepts() return V.solo == 0 or V.solo == ID end
+
 function A.move(x, y)
+    if not accepts() then return end
     local ox, oy = local_xy()
     V.x, V.y = x, y
     local nx, ny = local_xy()
     inject("mousemoved", nx, ny, nx - ox, ny - oy, false)
 end
 function A.press(x, y, b)
+    if not accepts() then return end
     V.x, V.y = x, y
     V.buttons[b] = true
     local nx, ny = local_xy()
     inject("mousepressed", nx, ny, b, false, 1)
 end
 function A.release(x, y, b)
+    if not accepts() then
+        if not V.buttons[b] then return end
+        x, y = V.x, V.y
+    end
     V.x, V.y = x, y
     V.buttons[b] = nil
     local nx, ny = local_xy()
     inject("mousereleased", nx, ny, b, false, 1)
 end
-function A.wheel(dx, dy) inject("wheelmoved", dx, dy) end
+function A.wheel(dx, dy)
+    if accepts() then inject("wheelmoved", dx, dy) end
+end
 function A.key(k, sc, rep)
+    if not accepts() then return end
     V.keys[k] = true
     inject("keypressed", k, sc, rep)
 end
 function A.keyup(k, sc)
+    if not accepts() and not V.keys[k] then return end
     V.keys[k] = nil
     inject("keyreleased", k, sc)
 end
-function A.text(t) inject("textinput", t) end
+function A.text(t)
+    if accepts() then inject("textinput", t) end
+end
 
 local function to_hex(s) return (s:gsub(".", function(c) return ("%02x"):format(c:byte()) end)) end
 local function from_hex(s) return (s:gsub("%x%x", function(h) return string.char(tonumber(h, 16)) end)) end
@@ -367,6 +385,8 @@ local function handle(line)
         A.keyup(f[2], f[3])
     elseif t == "t" then
         A.text(from_hex(f[2] or ""))
+    elseif t == "s" then
+        V.solo = tonumber(f[2]) or 0
     elseif t == "z" then
         apply_zoom(tonumber(f[2]) or 0)
     elseif t == "q" then
@@ -396,6 +416,7 @@ local function net_poll()
                 conns[#conns + 1] = c
                 -- Bring a newly connected instance up to date.
                 conn_send(c, ("z %d"):format(V.zoom))
+                conn_send(c, ("s %d"):format(V.solo))
                 conn_send(c, ("m %d %.5f %.5f"):format(V.hover, V.x, V.y))
             end
         end
@@ -464,14 +485,21 @@ local function capture(name, on_real)
     end
 end
 
+local function set_solo_everywhere(k)
+    emit(("s %d"):format(k))
+    V.solo = k
+end
+
 local function set_zoom_everywhere(k)
     emit(("z %d"):format(k))
     apply_zoom(k)
+    -- While solo mode is on, input follows the instance being looked at.
+    if V.solo ~= 0 and k ~= 0 and k ~= V.solo then set_solo_everywhere(k) end
 end
 
 local function is_hotkey(key)
     local K = CFG.keys
-    return key == K.zoom or key == K.prev or key == K.next or key == K.quit
+    return key == K.zoom or key == K.prev or key == K.next or key == K.solo or key == K.quit
 end
 
 local function hotkey(key, isrepeat)
@@ -483,6 +511,12 @@ local function hotkey(key, isrepeat)
         local cur = V.zoom ~= 0 and V.zoom or V.hover
         local step = key == K.next and 1 or -1
         set_zoom_everywhere((cur - 1 + step) % N + 1)
+    elseif key == K.solo then
+        if V.solo ~= 0 then
+            set_solo_everywhere(0)
+        else
+            set_solo_everywhere(V.zoom ~= 0 and V.zoom or V.hover)
+        end
     elseif key == K.quit then
         if real.kbIsDown("lctrl", "rctrl") then
             emit("q")
@@ -594,23 +628,48 @@ end
 
 love.draw = function()
     if game_draw then game_draw() end
-    if not CFG.label then return end
-    label_font = label_font or love.graphics.newFont(13)
-    local text = "#" .. ID
-    if is_hub and not server then
-        text = ("%s (cannot listen on port %d: %s)"):format(text, CFG.port, tostring(net_err))
-    elseif not is_hub and not link then
-        text = ("%s (no link on port %d: %s)"):format(text, CFG.port, tostring(net_err))
-    end
+    local solo_here = V.solo == ID
+    local dimmed = V.solo ~= 0 and not solo_here
+    if not (CFG.label or solo_here or dimmed) then return end
+    local w, h = love.graphics.getDimensions()
     love.graphics.push("all")
     love.graphics.origin()
     love.graphics.setCanvas()
     love.graphics.setShader()
     love.graphics.setScissor()
-    love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.rectangle("fill", 0, 0, label_font:getWidth(text) + 10, label_font:getHeight() + 4)
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print(text, label_font, 5, 2)
+    if dimmed then
+        love.graphics.setColor(0, 0, 0, 0.55)
+        love.graphics.rectangle("fill", 0, 0, w, h)
+    elseif solo_here then
+        -- Pulsing outline around the one instance that is receiving input.
+        local t = math.max(4, math.floor(h / 90))
+        local pulse = 0.75 + 0.25 * math.sin(love.timer.getTime() * 5)
+        love.graphics.setColor(1, 0.55, 0.1, pulse)
+        love.graphics.setLineWidth(t)
+        love.graphics.rectangle("line", t / 2, t / 2, w - t, h - t)
+    end
+    if CFG.label or solo_here then
+        label_font = label_font or love.graphics.newFont(13)
+        local text = "#" .. ID
+        if solo_here then text = text .. "  SOLO INPUT (" .. CFG.keys.solo:upper() .. " to end)" end
+        if is_hub and not server then
+            text = ("%s (cannot listen on port %d: %s)"):format(text, CFG.port, tostring(net_err))
+        elseif not is_hub and not link then
+            text = ("%s (no link on port %d: %s)"):format(text, CFG.port, tostring(net_err))
+        end
+        if solo_here then
+            love.graphics.setColor(1, 0.55, 0.1, 1)
+        else
+            love.graphics.setColor(0, 0, 0, 0.6)
+        end
+        love.graphics.rectangle("fill", 0, 0, label_font:getWidth(text) + 10, label_font:getHeight() + 4)
+        if solo_here then
+            love.graphics.setColor(0, 0, 0, 1)
+        else
+            love.graphics.setColor(1, 1, 1, 1)
+        end
+        love.graphics.print(text, label_font, 5, 2)
+    end
     love.graphics.pop()
 end
 

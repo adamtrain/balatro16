@@ -44,11 +44,20 @@ Steam folder, pass the path:
 |---|---|
 | F1 | Zoom into the instance under the mouse; press again to return to the grid |
 | F2 / F3 | Zoom to the previous / next instance |
+| F4 | Solo input: send input to one instance only; press again to go back to all |
 | Ctrl+F10 | Quit every instance |
 
 Everything else you do with the mouse or keyboard, in any window, happens in
 all of them. The game's own cursor is drawn in every window so you can see
 where the pointer is in each.
+
+### Fixing a desync
+
+If one instance ends up on a different screen from the rest, hover it (or zoom
+into it) and press F4. From then on only that instance receives input: it gets
+a pulsing orange outline and a "SOLO INPUT" tag, and the others are dimmed.
+Bring it back in line, then press F4 again to return to all instances. While
+solo input is on, zooming to another instance moves solo input to it.
 
 ## What to expect
 

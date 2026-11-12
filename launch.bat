@@ -38,6 +38,7 @@ rem set "BALATRO_MULTI_DISPLAY=2"   which monitor to use
 rem set "BALATRO_MULTI_FPS=60"      frame cap per instance
 rem set "BALATRO_MULTI_STEAM=0"     no Steam integration in any instance
 rem set "BALATRO_MULTI_LABEL=0"     hide the instance number in the corner
+rem set "BALATRO_MULTI_PORT=47816"  local port the instances talk over
 
 rem Lets instance 1 reach Steam when started outside the Steam client.
 set "SteamAppId=2379780"

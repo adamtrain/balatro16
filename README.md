@@ -79,11 +79,13 @@ Hotkeys are in the `keys` table at the top of `mod/BalatroMulti/multi.lua`.
 
 ## Troubleshooting
 
-- A window shows `(no link)` next to its number: it cannot reach instance 1.
-  Check instance 1 is still running; a firewall prompt for Balatro on first run
-  should be allowed (traffic stays on this PC).
-- `(port busy)` on instance 1: another program uses the port. Set
-  `BALATRO_MULTI_PORT` to another number in `launch.bat`.
+- Instance 1 shows `(cannot listen on port ...)`: it could not open the local
+  port the instances talk over, and the text after the colon is the reason.
+  Remove the `rem ` in front of the `BALATRO_MULTI_PORT` line in `launch.bat`
+  and try another number such as `23816`. To see whether Windows has reserved
+  the port, run `netsh interface ipv4 show excludedportrange protocol=tcp`.
+- Another window shows `(no link ...)`: it cannot reach instance 1. Check
+  instance 1 is still running and is not showing the message above.
 - A crash at startup: Lovely writes logs to `%AppData%\Balatro\Mods\lovely\log`.
 
 ## Development

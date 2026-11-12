@@ -223,6 +223,23 @@ local server          -- hub: listening socket
 local conns = {}      -- hub: connected instances
 local link            -- spoke: connection to the hub
 local retry_at = 0
+local net_err         -- why the hub cannot listen / the spoke cannot connect
+
+-- Listen on localhost only. Address reuse is left off on Windows, where it
+-- would let two programs share the port silently.
+local function hub_listen()
+    local s, err = (socket.tcp4 or socket.tcp)()
+    if not s then return nil, err end
+    if love.system.getOS() ~= "Windows" then s:setoption("reuseaddr", true) end
+    local ok, e = s:bind("127.0.0.1", CFG.port)
+    if ok then ok, e = s:listen(32) end
+    if not ok then
+        s:close()
+        return nil, e
+    end
+    s:settimeout(0)
+    return s
+end
 
 local function new_conn(sock)
     sock:settimeout(0)
@@ -364,8 +381,7 @@ local function net_poll()
     if is_hub then
         if not server and now >= retry_at then
             retry_at = now + 0.5
-            local s = socket.bind("127.0.0.1", CFG.port)
-            if s then s:settimeout(0); server = s end
+            server, net_err = hub_listen()
         end
         if server then
             while true do
@@ -391,11 +407,13 @@ local function net_poll()
     else
         if not link and now >= retry_at then
             retry_at = now + 0.5
-            local s = socket.tcp()
+            local s = (socket.tcp4 or socket.tcp)()
             s:settimeout(0.05)
-            if s:connect("127.0.0.1", CFG.port) then
-                link = new_conn(s)
+            local ok, e = s:connect("127.0.0.1", CFG.port)
+            if ok then
+                link, net_err = new_conn(s), nil
             else
+                net_err = e
                 s:close()
             end
         end
@@ -558,8 +576,11 @@ love.draw = function()
     if not CFG.label then return end
     label_font = label_font or love.graphics.newFont(13)
     local text = "#" .. ID
-    if is_hub and not server then text = text .. " (port busy)" end
-    if not is_hub and not link then text = text .. " (no link)" end
+    if is_hub and not server then
+        text = ("%s (cannot listen on port %d: %s)"):format(text, CFG.port, tostring(net_err))
+    elseif not is_hub and not link then
+        text = ("%s (no link on port %d: %s)"):format(text, CFG.port, tostring(net_err))
+    end
     love.graphics.push("all")
     love.graphics.origin()
     love.graphics.setCanvas()

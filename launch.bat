@@ -30,6 +30,15 @@ exit /b 1
 :game_ok
 for %%F in ("%GAME%") do set "GAMEDIR=%%~dpF"
 
+rem Close any copies already running: one left over from an earlier launch
+rem would still hold the local port the instances talk over.
+tasklist /FI "IMAGENAME eq Balatro.exe" 2>nul | find /I "Balatro.exe" >nul
+if errorlevel 1 goto not_running
+echo Closing Balatro copies that are already running...
+taskkill /IM Balatro.exe /F >nul 2>&1
+timeout /t 2 /nobreak >nul
+:not_running
+
 rem Tells the mod how many instances there are.
 set "BALATRO_MULTI_N=%N%"
 

@@ -21,6 +21,11 @@ N = math.max(1, math.min(16, math.floor(N)))
 ID = math.floor(ID)
 if ID < 1 or ID > N then return end
 
+-- If two copies of the mod are installed, this file is appended twice. The
+-- second copy would wrap the first and fail to open the port the first holds.
+if rawget(_G, "BALATRO_MULTI_LOADED") then return end
+rawset(_G, "BALATRO_MULTI_LOADED", true)
+
 local CFG = {
     port = tonumber(os.getenv("BALATRO_MULTI_PORT") or "") or 47816,
     display = tonumber(os.getenv("BALATRO_MULTI_DISPLAY") or "") or 1,

@@ -153,3 +153,5 @@ end
 
 -- Lovely appends the mod to main.lua; do the same here.
 if os.getenv("BM_MOD") then assert(loadfile(os.getenv("BM_MOD")))() end
+-- BM_TWICE simulates two installed copies of the mod.
+if os.getenv("BM_MOD") and os.getenv("BM_TWICE") then assert(loadfile(os.getenv("BM_MOD")))() end

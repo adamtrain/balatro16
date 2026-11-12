@@ -30,7 +30,8 @@ The mod does nothing when the game is started normally from Steam.
 
        launch.bat 16
 
-Double-clicking `launch.bat` starts 4. To stop, press Ctrl+F10 in any window.
+`launch.bat` first closes any copy of Balatro that is already running, including
+one you started normally from Steam. Double-clicking `launch.bat` starts 4. To stop, press Ctrl+F10 in any window.
 
 The count can be 2, 4, 8 or 16 (default 4). If Balatro is not in the default
 Steam folder, pass the path:
@@ -81,7 +82,10 @@ Hotkeys are in the `keys` table at the top of `mod/BalatroMulti/multi.lua`.
 
 - Instance 1 shows `(cannot listen on port ...)`: it could not open the local
   port the instances talk over, and the text after the colon is the reason.
-  Remove the `rem ` in front of the `BALATRO_MULTI_PORT` line in `launch.bat`
+  If it says `address already in use`, run `netstat -ano | findstr :47816`
+  while the instances are open; the last column is the ID of the program
+  holding the port, and `tasklist /FI "PID eq <id>"` names it. Otherwise,
+  remove the `rem ` in front of the `BALATRO_MULTI_PORT` line in `launch.bat`
   and try another number such as `23816`. To see whether Windows has reserved
   the port, run `netsh interface ipv4 show excludedportrange protocol=tcp`.
 - Another window shows `(no link ...)`: it cannot reach instance 1. Check

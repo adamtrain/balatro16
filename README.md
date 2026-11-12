@@ -74,7 +74,7 @@ Edit the `set` lines near the top of `launch.bat`:
 | `BALATRO_MULTI_FPS` | Frame cap per instance | 60 |
 | `BALATRO_MULTI_STEAM` | `0` disables Steam in every instance | on in instance 1 |
 | `BALATRO_MULTI_LABEL` | `0` hides the instance number | shown |
-| `BALATRO_MULTI_PORT` | Local port the instances talk over | 47816 |
+| `BALATRO_MULTI_PORT` | Local port the instances talk over | 42421 |
 
 Hotkeys are in the `keys` table at the top of `mod/BalatroMulti/multi.lua`.
 
@@ -82,7 +82,7 @@ Hotkeys are in the `keys` table at the top of `mod/BalatroMulti/multi.lua`.
 
 - Instance 1 shows `(cannot listen on port ...)`: it could not open the local
   port the instances talk over, and the text after the colon is the reason.
-  If it says `address already in use`, run `netstat -ano | findstr :47816`
+  If it says `address already in use`, run `netstat -ano | findstr :42421`
   while the instances are open; the last column is the ID of the program
   holding the port, and `tasklist /FI "PID eq <id>"` names it. Otherwise,
   remove the `rem ` in front of the `BALATRO_MULTI_PORT` line in `launch.bat`

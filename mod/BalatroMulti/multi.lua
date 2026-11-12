@@ -27,7 +27,7 @@ if rawget(_G, "BALATRO_MULTI_LOADED") then return end
 rawset(_G, "BALATRO_MULTI_LOADED", true)
 
 local CFG = {
-    port = tonumber(os.getenv("BALATRO_MULTI_PORT") or "") or 47816,
+    port = tonumber(os.getenv("BALATRO_MULTI_PORT") or "") or 42421,
     display = tonumber(os.getenv("BALATRO_MULTI_DISPLAY") or "") or 1,
     fps = tonumber(os.getenv("BALATRO_MULTI_FPS") or "") or 60,
     -- Real Steam integration only in instance 1 (and not at all if set to 0).
